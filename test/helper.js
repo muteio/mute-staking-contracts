@@ -9,8 +9,8 @@ const TOKEN_DECIMALS = 18;
 // check for 1% lp tax
 function $TOKEN (x, fee = 0) {
   if(fee != 0){
-    var feeVal = x - (fee / 99)
-    return (new BN(feeVal)).mul((new BN(10)).pow(new BN(TOKEN_DECIMALS)))
+    var feeVal = 100 * (x - (fee / 100))
+    return (new BN(feeVal)).mul((new BN(10)).pow(new BN(TOKEN_DECIMALS - 2)))
   }
 
   return (new BN(x)).mul((new BN(10)).pow(new BN(TOKEN_DECIMALS)))

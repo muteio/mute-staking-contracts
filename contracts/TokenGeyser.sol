@@ -170,14 +170,10 @@ contract TokenGeyser {
         }
         totals.stakingTokensSeconds = totals.stakingTokensSeconds.sub(stakingTokensSecondsToBurn);
         totals.stakingTokens = totals.stakingTokens.sub(amount);
-        // Already set in updateAccounting
-        // totals.lastAccountingTimestampSec = now;
 
         // 2. Global Accounting
         _totalStakingTokensSeconds = _totalStakingTokensSeconds.sub(stakingTokensSecondsToBurn);
         totalStakingTokens = totalStakingTokens.sub(amount);
-        // Already set in updateAccounting
-        // _lastAccountingTimestampSec = now;
 
         // unlock 99% only, leave 1% locked as a liquidity tax
         uint256 amountMinusTax = amount.mul(99).div(100);
@@ -198,14 +194,9 @@ contract TokenGeyser {
         return rewardAmount;
     }
 
-    function computeNewReward(uint256 currentRewardTokens,
-                                uint256 stakingTokensSeconds,
-                                uint256 stakeTimeSec) private view returns (uint256) {
+    function computeNewReward(uint256 currentRewardTokens, uint256 stakingTokensSeconds, uint256 stakeTimeSec) private view returns (uint256) {
 
-        uint256 newRewardTokens =
-            totalUnlocked()
-            .mul(stakingTokensSeconds)
-            .div(_totalStakingTokensSeconds);
+        uint256 newRewardTokens = totalUnlocked().mul(stakingTokensSeconds).div(_totalStakingTokensSeconds);
 
         if (stakeTimeSec >= bonusPeriodSec) {
             return currentRewardTokens.add(newRewardTokens);
@@ -233,8 +224,7 @@ contract TokenGeyser {
         return address(getStakingToken());
     }
 
-    function updateAccounting() public returns (
-        uint256, uint256, uint256, uint256, uint256, uint256) {
+    function updateAccounting() public returns (uint256, uint256, uint256, uint256, uint256, uint256) {
 
         unlockTokens();
 
@@ -304,18 +294,38 @@ contract TokenGeyser {
     }
 
     function addTokens(uint256 amount) external {
-        updateAccounting();
         UnlockSchedule storage schedule = unlockSchedules[unlockSchedules.length - 1];
-        // normalize the amount weight to offset lost time
-        uint256 mintedLockedShares = amount.mul(schedule.durationSec.div(schedule.endAtSec.sub(now)));
-        schedule.initialLockedTokens = schedule.initialLockedTokens.add(mintedLockedShares);
 
-        totalLockedTokens = totalLockedTokens.add(amount);
+        // if we don't have an active schedule, create one
+        if(schedule.endAtSec < now){
+          uint256 lockedTokens = totalLocked();
 
-        require(_lockedPool.token().transferFrom(msg.sender, address(_lockedPool), amount),
-            'TokenGeyser: transfer into locked pool failed');
+          UnlockSchedule memory schedule;
+          schedule.initialLockedTokens = amount;
+          schedule.lastUnlockTimestampSec = now;
+          schedule.endAtSec = now.add(60 * 60 * 24 * 135);
+          schedule.durationSec = 60 * 60 * 24 * 135;
+          unlockSchedules.push(schedule);
 
-        emit TokensAdded(amount, totalLocked());
+          totalLockedTokens = lockedTokens.add(amount);
+
+          require(_lockedPool.token().transferFrom(msg.sender, address(_lockedPool), amount),
+              'TokenGeyser: transfer into locked pool failed');
+          emit TokensLocked(amount, 60 * 60 * 24 * 135, totalLocked());
+        } else {
+          // normalize the amount weight to offset lost time
+          uint256 mintedLockedShares = amount.mul(schedule.durationSec.div(schedule.endAtSec.sub(now)));
+          schedule.initialLockedTokens = schedule.initialLockedTokens.add(mintedLockedShares);
+
+          uint256 balanceBefore = _lockedPool.token().balanceOf(address(_lockedPool));
+          require(_lockedPool.token().transferFrom(msg.sender, address(_lockedPool), amount),
+              'TokenGeyser: transfer into locked pool failed');
+          uint256 balanceAfter = _lockedPool.token().balanceOf(address(_lockedPool));
+
+          totalLockedTokens = totalLockedTokens.add(balanceAfter.sub(balanceBefore));
+          emit TokensAdded(balanceAfter.sub(balanceBefore), totalLocked());
+        }
+
     }
 
     function unlockTokens() public returns (uint256) {
@@ -362,9 +372,7 @@ contract TokenGeyser {
         return sharesToUnlock;
     }
 
-    function rescueFundsFromStakingPool(address tokenToRescue, address to, uint256 amount)
-        public onlyOwner returns (bool) {
-
+    function rescueFundsFromStakingPool(address tokenToRescue, address to, uint256 amount) public onlyOwner returns (bool) {
         return _stakingPool.rescueFunds(tokenToRescue, to, amount);
     }
 }

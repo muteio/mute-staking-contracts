@@ -329,10 +329,11 @@ describe('unstaking', function () {
         await timeController.advanceTime(ONE_YEAR / 4);
         await dist.stake($TOKEN(5000), [], { from: anotherAccount });
         await dist.stake($TOKEN(3000), [], {from: owner}); // 3250 weight
-        await dist.addTokens($TOKEN(10000), {from: owner}); // 30k equiv to contract instead of 10k
-        await timeController.advanceTime(ONE_YEAR / 4); // 7500 unlocked so far
+        await dist.addTokens($TOKEN(10000), {from: owner}); // 30k total (20k + 10k) equiv to contract instead of 10k
+        await timeController.advanceTime(ONE_YEAR / 4); // 7500 unlocked so far (15k)
         await dist.updateAccounting({ from: anotherAccount });
         await dist.updateAccounting();
+        expect(await dist.totalLocked.call()).to.be.bignumber.equal($TOKEN(7500)); // 12500 unlocked so far
         expect(await dist.totalStaked.call()).to.be.bignumber.equal($TOKEN(18000));
         checkTokenAprox(await totalRewardsFor(anotherAccount), rewardsAnotherAccount);
         checkTokenAprox(await totalRewardsFor(owner), rewardsOwner);

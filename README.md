@@ -7,8 +7,8 @@ Adds a 1% liquidity tax on withdrawal. The liquidity tax is sent to the contract
 AddTokens function added to allow for token fees to accumulate into current vesting contracts while maintaining stable apy.
 
 The official staking pool contract addresses are:
-- UniswapV2 [ETH/VOICE]() Pool: [0x0]()
-- UniswapV2 [ETH/MUTE]() Pool: [0x0]()
+- UniswapV2 [ETH/VOICE]() Pool: [0xebd6b49a889dfb1ad3a141cf98d8f61d182975f0](https://etherscan.io/address/0xebd6b49a889dfb1ad3a141cf98d8f61d182975f0)
+- UniswapV2 [ETH/MUTE]() Pool: [0x3ba273e7532c526662e383e6635933ce12e14049](https://etherscan.io/address/0x3ba273e7532c526662e383e6635933ce12e14049)
 
 ## Table of Contents
 
